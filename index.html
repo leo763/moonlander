@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+
+       body {
+            background-color: #87CEEB;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 80vh;
+            margin: 0;
+        }
+
+        #grid {
+            display: flex;
+            flex-direction: column;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 1px solid black;
+            border-radius: 5px;
+        }
+    </style>
+    <title>Moon Lander Game</title>
+
+    <!-- Add the Bootstrap CSS link -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://kit.fontawesome.com/a47d6090dc.js" crossorigin="anonymous"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Arya:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,700;1,400;1,500;1,700&family=Montserrat:ital,wght@0,100;0,200;0,300;0,700;0,800;0,900;1,100;1,200;1,700;1,800;1,900&family=Nabla&family=Petrona:ital,wght@0,200;0,300;0,900;1,200;1,900&family=Poppins:ital,wght@0,100;0,200;0,400;0,500;0,600;0,800;0,900;1,100;1,200;1,600;1,700;1,900&family=Rampart+One&family=Roboto:ital,wght@0,100;0,400;0,700;0,900;1,100;1,400;1,700;1,900&family=Sofia&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="grid">
+    
+    <canvas id="gameCanvas" width="320" height="480"></canvas>
+
+    <div id="but" class="row">
+        <div class="d-flex mx-auto">
+            <!-- <i id="start" class="fa fa-play m-2 border p-2"></i> -->
+            <i id="left" class="fa fa-arrow-left m-2 border p-2"></i>
+            <!-- <i id="fire" class="fa fa-fire m-2 border p-2"></i> -->
+            <i id="fire" class="fa fa-arrow-up m-2 border p-2"></i>
+            <i id="right" class="fa fa-arrow-right m-2 border p-2"></i>
+        </div>
+       
+    </div>
+</div>
+     <img id="space-image" src="images/space.jpeg" style="display: none;">
+     <img id="ship" src="images/ship.png" style="display: none;">
+     <img id="ship1" src="images/ship1.png" style="display: none;">
+     <img id="ship2" src="images/ship4.png" style="display: none;">
+     <img id="rocket" src="images/rocket.png" style="display: none;">
+
+     <audio id="explode" src="audios/explosion.mp3"></audio>
+     <audio id="fire1" src="audios/fire.mp3"></audio>
+     <audio id="sound1" src="audios/sound1.mp3"></audio>
+     <audio id="space" src="audios/space.mp3"></audio>
+     <audio id="win" src="audios/win.mp3"></audio>
+     <audio id="drum" src="audios/drum.mp3"></audio>
+
+
+    <script>
+        
+        var left = document.getElementById("left");
+        var up = document.getElementById("up");
+        var right = document.getElementById("right");
+        var start = document.getElementById("start");
+        var fire = document.getElementById("fire");
+        var spaceImage = document.getElementById('space-image');
+        var ship = document.getElementById('ship');
+        var ship1 = document.getElementById('ship1');
+        var ship2 = document.getElementById('ship2');
+        var rocket = document.getElementById('rocket');
+        var explode = document.getElementById('explode');
+        var fire1 = document.getElementById('fire1');
+        var sound1 = document.getElementById('sound1');
+        var space = document.getElementById('space');
+        var win = document.getElementById('win');
+        var drum = document.getElementById('drum');
+        var confetti = [];
+        let fireworks = [];
+        // explode.cuurentTime = 0;
+
+
+        // Get the canvas and context
+        var canvas = document.getElementById("gameCanvas");
+        var ctx = canvas.getContext("2d");
+
+
+        // // Flag to check if the game is over
+        let gameover = false;
+        var isFire = false;
+        var isLeft = false;
+        var isRight = false;
+        var isStart = false;
+        var isFinish = false;
+        var isConfetti = false;
+        var b;
+
+        // Initial lander position and velocity
+        let lander = {
+              image: ship,
+              w: 30,
+              h: 30,
+              x: Math.floor(Math.random() * (canvas.width - 60 + 1)) + 30,
+              y: 20,
+              velocityY: 0,
+              velocityX: 0,
+              gravity: 0.005,
+              thrust: 0.003,
+              displace: 0.002,
+              fuel:2000
+          };
+
+
+          // Text
+          let text = [
+            {text: "Vertical Speed       : 0", x: 70, y: 10, font: '12px Arya', c: "white"},
+            {},
+            {text: "Fuel : "+lander.fuel, x: 230, y: 10, font: '12px Arya', c: "white"},
+            {text: "", x: canvas.width/2, y: canvas.height/2, font: '30px Arya', c: "green"},
+            {text: "", x: canvas.width/2, y: canvas.height/2, font: '30px Arya', c: "red"},
+            {text: "", x: canvas.width/2, y: (canvas.height/2)+40, font: '30px Arya', c: "green"}
+        
+          ];
+
+
+
+          // Draw hills using lines
+          var heightArray = [0, 10, 20, 30, 40, 45, 35, 70, 25,55];
+          var heightResult = [];
+          var lineHeight = [];
+
+          for (let index = 0; index < canvas.width; index = index + 40) {
+              const h = Math.floor(Math.random() * heightArray.length);
+              heightResult.push([index, (index+20), (canvas.height - heightArray[h])]);
+          }
+
+          for (let index = 0; index < 3; index++) {
+                const l = Math.floor(Math.random() * heightResult.length);
+                lineHeight.push(heightResult[l]);
+          }
+
+
+
+        canvas.onclick = (e)=>{
+          if (isFinish) { 
+            heightResult = [];
+            lineHeight = [];
+
+            for (let index = 0; index < canvas.width; index = index + 40) {
+                const h = Math.floor(Math.random() * heightArray.length);
+                heightResult.push([index, (index+20), (canvas.height - heightArray[h])]);
+            }
+
+            for (let index = 0; index < 3; index++) {
+                  const l = Math.floor(Math.random() * heightResult.length);
+                  lineHeight.push(heightResult[l]);
+            }
+              if ((e.clientX - canvas.offsetLeft) > 80 && (e.clientX - canvas.offsetLeft) < (canvas.width-80) && (e.clientY - canvas.offsetTop)>(canvas.height-180) && (e.clientY - canvas.offsetTop)< (canvas.height-120)) {
+                isFinish = false;
+                isConfetti = false;
+                gameover = false;
+                isFire = false;
+                isRight = false;
+                isLeft = false;
+                text[0].text = "Vertical Speed       : 0";
+                lander.fuel = 2000;
+                text[2].text = "Fuel : "+lander.fuel;
+                text[3].text = "";
+                text[4].text = "";
+                text[5].text = "";
+                lander.image = ship;
+                lander.velocityX = 0;
+                lander.velocityY = 0;
+                lander.gravity = 0.005;
+                lander.thrust = 0.003;
+                lander.displace = 0.002;
+                lander.x = Math.floor(Math.random() * (canvas.width - 60 + 1)) + 30;
+                lander.y = 20;
+                lander.h = 30;
+                document.getElementById('but').style.display = '';
+                win.pause();
+                explode.pause();
+                drum.pause();
+                startDrive();
+                spaceDrive();
+                update();
+
+              }  
+          }
+
+          if (isStart) { 
+              if ((e.clientX - canvas.offsetLeft) > 80 && (e.clientX - canvas.offsetLeft) < (canvas.width-80) && (e.clientY - canvas.offsetTop)>(canvas.height-90) && (e.clientY - canvas.offsetTop)< (canvas.height-30)) {
+                  isStart = false;
+                  document.getElementById('but').style.display = '';
+                  drum.pause();
+                  spaceDrive();
+                  update();
+                }  
+            }
+            else{
+                        
+            }
+
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        function cText(text, x, y, f, c) {
+            ctx.font = f;
+            ctx.fillStyle = c;
+
+            // Draw white text on the canvas
+            ctx.fillText(text, x, y);
+
+        }
+
+        function drawText() {
+          ctx.textBaseline = "middle"; // Center vertically
+          ctx.textAlign = "center"; // Center horizontally
+          cText(text[0].text, text[0].x, text[0].y, text[0].font, text[0].c);
+          cText(text[2].text, text[2].x, text[2].y, text[2].font, text[2].c);
+          cText(text[3].text, text[3].x, text[3].y, text[3].font, text[3].c);
+          cText(text[4].text, text[4].x, text[4].y, text[4].font, text[4].c);
+          cText(text[5].text, text[5].x, text[5].y, text[5].font, text[5].c);
+        }
+
+
+
+        function clear() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);   
+        }
+
+
+
+
+
+
+        function drawHillLine() {
+          
+            for (let index = 0; index < lineHeight.length; index=index+2) {
+              // Draw first hill
+              ctx.beginPath();
+              ctx.moveTo(lineHeight[index][0], lineHeight[index][2]);
+              ctx.lineTo(lineHeight[index][1], lineHeight[index][2]);
+              ctx.strokeStyle = '#1aff00'; 
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+
+        }
+
+        function drawHills() {
+            // Draw first hill
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height-0);
+
+            for (let index = 0; index < heightResult.length; index++) {
+              ctx.lineTo(heightResult[index][0], heightResult[index][2]);
+              ctx.lineTo(heightResult[index][1], heightResult[index][2]);
+            }
+            ctx.lineTo(canvas.width, (canvas.height-0));
+            ctx.closePath();
+            // ctx.fillStyle = '#F6F1D5'; 
+            ctx.fillStyle = '#acd0f1'; 
+            
+            ctx.fill();
+
+        }
+
+
+
+
+
+        function drawCanvas (){
+          // Clear the canvas
+          clear();
+          ctx.drawImage(spaceImage, 0, 0, canvas.width, canvas.height);
+          drawHills();
+          ctx.drawImage(lander.image, lander.x, lander.y, lander.w, lander.h);
+          drawHillLine();
+          drawText();  
+          if (isFinish) {
+            restartButton();
+          }
+
+        }
+        // drawCanvas();
+
+
+        function calc() {
+            // Update lander position
+                if (lander.y >= 20) {
+                  lander.y += lander.velocityY;
+                }
+                else{
+                  isFire = false;
+                  lander.y = 21
+                  lander.velocityY = 0;
+                }
+                lander.x += lander.velocityX;
+                text[0].text = "Vertical Speed       : "+ Math.floor(lander.velocityY*100);
+                if (isFire && lander.velocityY > -5) {
+                    lander.velocityY -= lander.thrust;
+                    if (isFire) {
+                      lander.fuel--;
+                      text[2].text = "Fuel : "+lander.fuel;
+                    }
+              
+                }
+                else if(!isFire && lander.velocityY < 1){
+                 lander.velocityY += lander.gravity;
+                }
+
+                if (isRight && (lander.x+lander.w) < canvas.width) {
+                  if(lander.velocityX < 0.8){
+                    lander.velocityX += lander.displace;
+                  }
+                  right.style.backgroundColor ="green";
+                  left.style.backgroundColor ="";
+                }
+                else if(isLeft && lander.x > 0){
+                  if(lander.velocityX > -0.8){
+                    lander.velocityX -= lander.displace;
+                  }
+                  left.style.backgroundColor ="green";
+                  right.style.backgroundColor ="";
+                }
+                else{
+                  lander.velocityX = 0;
+                  right.style.backgroundColor ="";
+                  left.style.backgroundColor ="";
+                }   
+                
+                
+
+
+                if (lander.fuel <=0 ) {
+                    gameover = true;
+                    isFinish = true;
+                    startDrive();
+                    lander.image = ship;
+                    lander.h = 30;
+                    fire1.currentTime = 0;
+                    fire1.play();
+                    text[4].text = "Out of Fuel!!!";
+                    text[5].text = "Score : 50";
+                    document.getElementById('but').style.display = 'none';
+                  }
+
+                 // Check if the lander has landed or crashed
+                  var isCheck = false;
+                  for (let index = 0; index < heightResult.length; index++) {
+                      if (lander.y+30 > heightResult[index][2]) {
+
+                        if (heightResult[index][0] < (lander.x+10) && heightResult[index][1] > (lander.x+20)) {
+                          gameover = true;
+                          isFinish = true;
+                          startDrive();
+                          lander.image = ship2;
+                          lander.h = 30;
+                          text[4].text = "Crushed!!! Missed";
+                          text[5].text = "Score : "+(lander.fuel*0.25);
+                          var isCrush = false;
+                          for (let index1 = 0; index1 < lineHeight.length; index1++) {
+                            if (lineHeight[index1] == heightResult[index]) {
+                                  isCrush = true;
+                                  break;
+                            } 
+                            
+                          }
+                          if (isCrush) {
+                            if (lander.velocityY > 0.3) {
+                              lander.image = ship2;
+                              explode.currentTime = 0;
+                              fire1.currentTime = 0;
+                              explode.play();
+                              fire1.play();
+                              lander.h = 30;
+                              text[4].text = "Crushed!!! Speed > 30";
+                              text[5].text = "Score : "+(lander.fuel);
+                              document.getElementById('but').style.display = 'none';
+                            }
+                            else{
+                              lander.image = ship;
+                              lander.h = 30;
+                              text[4].text = "";
+                              win.currentTime = 0;
+                              win.play();
+                              text[3].text = "Safe landing!!! ";
+                              text[5].text = "Score : "+(lander.fuel*5);
+                              isCheck = true;
+                              isConfetti = true;
+                              document.getElementById('but').style.display = 'none';
+                            }
+                            
+                          }
+                          else{
+                            explode.currentTime = 0;
+                            fire1.currentTime = 0;
+                            explode.play();
+                            fire1.play();
+                          }
+
+                          break;
+                        }
+                        
+                      }
+            
+                  }
+
+                  if (isCheck) {
+                    text[4].text = "";
+                  }
+
+                  if (lander.y+30 > canvas.height+10) {
+                    gameover = true;
+                    isFinish = true;
+                    startDrive();
+                    lander.image = ship2;
+                    explode.currentTime = 0;
+                    fire1.currentTime = 0; 
+                    explode.play();
+                    fire1.play();
+                    lander.h = 30;
+                    text[4].text = "Crushed!!! Missed";
+                    text[5].text = "Score : "+(lander.fuel*0.25);
+                    document.getElementById('but').style.display = 'none';
+                  }
+        }
+
+
+
+        // Update the game state
+        function update() {
+         
+            if(isConfetti && lander.velocityY < 0.3) {
+              createConfetti();
+            }
+
+            if (isFinish && !isConfetti) {
+              launch((lander.x + 15), lander.y);  
+            }
+
+            if (!gameover) {
+                  calc(); 
+                  // Draw the lander
+                  drawCanvas();
+
+                  // Request the next animation frame
+                  requestAnimationFrame(update);
+             }
+        }
+
+
+        // Update the game state
+        function spaceDrive() {
+          if (!gameover) {
+                space.play();
+                // Request the next animation frame
+                requestAnimationFrame(spaceDrive);
+          }
+        }
+
+        // Update the game state
+        function startDrive() {
+          if (isFinish) {
+                drum.play();
+                // Request the next animation frame
+                requestAnimationFrame(startDrive);
+          }
+        }   
+             
+
+        // Update the game state
+        function speedDrive() {
+          if (!isFire) {
+                sound1.play();
+                // Request the next animation frame
+                requestAnimationFrame(speedDrive);
+          }
+        }
+
+
+
+
+
+
+        function restartButton (params) {
+                     // Draw the button border
+          ctx.fillStyle = "white"; // Green border color
+          ctx.fillRect(80, canvas.height-180, canvas.width-160,  60);
+
+          // Set text properties
+          ctx.fillStyle = "black"; // White text color
+          ctx.font = "50px Arya";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          // Draw the text inside the button
+          ctx.fillText("Restart", canvas.width / 2, canvas.height-145);
+          // isFinish = true;
+        }
+
+
+      // Draw the button with text
+      function drawButton() {
+
+          // Draw the button border
+          ctx.fillStyle = "white"; // Green border color
+          ctx.fillRect(80, canvas.height-90, canvas.width-160,  60);
+
+          // Set text properties
+          ctx.fillStyle = "black"; // White text color
+          ctx.font = "50px Arya";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          // Draw the text inside the button
+          ctx.fillText("Start", canvas.width / 2, canvas.height-55);
+
+
+          ctx.font = "15px Arya";
+          ctx.fillStyle = "white"; // White text color
+
+          // Draw the text inside the button
+          ctx.fillText("<-- Keyboard Moves -->", canvas.width / 2, (canvas.height/2)-25);
+          ctx.fillText("<-- Screen Moves -->", canvas.width / 2, (canvas.height/2)+35);
+
+          ctx.font = "12px Arya";
+          ctx.fillText("UpArrowKey = ^", canvas.width / 2, (canvas.height/2)-10);
+          ctx.fillText("leftArrowKey = <", canvas.width / 2, (canvas.height/2)+0);
+          ctx.fillText("rightArrowKey = >", canvas.width / 2, (canvas.height/2)+10);
+          ctx.fillText("Touch middle = ^", canvas.width / 2, (canvas.height/2)+50);
+          ctx.fillText("Touch left or right = < or >", canvas.width / 2, (canvas.height/2)+60);
+          // ctx.fillText("touch either left or right of the screen", canvas.width / 2, (canvas.height/2)-25);
+
+        }
+
+
+
+
+
+
+
+
+        function startPage(){
+            clear();
+            ctx.drawImage(spaceImage, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(rocket, 60, 30, 200, 150);
+            // Call the function to draw the initial button
+            drawButton();
+            isStart = true;
+            document.getElementById('but').style.display = 'none';
+        }
+
+
+        startPage();
+
+
+
+        left.addEventListener("click", ()=>{
+          isLeft = !isLeft;
+          isRight = false;
+        })
+
+        right.addEventListener("click", ()=>{
+          isRight = !isRight;
+          isLeft = false;
+        })
+
+        fire.addEventListener("click", ()=>{
+          isFire = !isFire;
+          fire.style.backgroundColor = isFire ? "green" : "white";
+          lander.image = isFire ? ship1 : ship;
+          lander.h = isFire ? 45 : 30;
+        })
+       
+
+
+        document.addEventListener("keydown", handleKeyPress);
+          function handleKeyPress(event) {
+              if (event.key === "ArrowLeft") {
+                isLeft = true;
+                isRight = false;
+              } else if (event.key === "ArrowRight") {
+                isRight = true;
+                isLeft = false;
+              }
+              else if (event.key === "ArrowUp") {
+                isFire = true;
+                fire.style.backgroundColor = isFire ? "green" : "white";
+                lander.image = isFire ? ship1 : ship;
+                lander.h = isFire ? 45 : 30;
+              }
+          }
+
+        document.addEventListener("keyup", handleKeyPress1);
+        function handleKeyPress1(event) {
+            if (event.key === "ArrowLeft") {
+              isLeft = false;
+              // isRight = false;
+            } else if (event.key === "ArrowRight") {
+              isRight = false;
+              // isLeft = false;
+            }
+            else if (event.key === "ArrowUp") {
+              isFire = false;
+              fire.style.backgroundColor = isFire ? "green" : "white";
+              lander.image = isFire ? ship1 : ship;
+              lander.h = isFire ? 45 : 30;
+            }
+        }
+
+
+
+
+
+
+        canvas.addEventListener("touchstart", handleTouch);
+        function handleTouch(event) {
+            var touchX = event.touches[0].clientX;
+            
+
+             if (touchX < 80) {
+                isLeft = !isLeft;
+                isRight = false;
+              } else if (touchX > 280) {
+                isRight = !isRight;
+                isLeft = false;
+              }
+              else if (touchX > 90 && touchX < 280) {
+                isFire = !isFire;
+                fire.style.backgroundColor = isFire ? "green" : "white";
+                lander.image = isFire ? ship1 : ship;
+                lander.h = isFire ? 45 : 30;
+              }
+
+        }
+
+
+
+
+
+
+
+
+
+        // Add the following function
+        function createConfetti() {
+          if(isConfetti && lander.velocityY < 0.3){
+                confetti.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 12 + 2, // Random size between 2 and 7
+                    color: `rgb(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255})`
+                });
+
+                if (confetti.length > 100) {
+                  confetti.splice(0, 5);
+                }
+                drawCanvas();
+                drawConfetti();
+                requestAnimationFrame(createConfetti);
+              }
+
+        }
+
+
+        // Add a new function to draw confetti particles
+        function drawConfetti() {
+            for (let i = 0; i < confetti.length; i++) {
+                ctx.beginPath();
+                ctx.arc(confetti[i].x, confetti[i].y, Math.random() * 8 + 2, 0, 2 * Math.PI);
+                ctx.fillStyle = confetti[i].color;
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+        // Particle class
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.radius = 5;
+            this.speed = { x: Math.random() * 4 - 2, y: Math.random() * 4 - 2 };
+            this.life = 200; // Adjust the particle life
+        }
+
+        update() {
+            this.x += this.speed.x;
+            this.y += this.speed.y;
+            this.life--;
+
+            // Fade out the particle
+            this.radius -= 0.02;
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        
+    }
+
+
+    function createFirework(x, y) {
+        const particles = [];
+
+        // Create particles for the burst
+        for (let i = 0; i < 100; i++) {
+            const color = `hsl(${Math.random() * 20+ 20}, 100%, 50%)`;
+            const particle = new Particle(x, y, color);
+            particles.push(particle);
+        }
+
+        return particles;
+    }
+
+    function animateFireworkBurst() {
+        drawCanvas();
+
+        for (const firework of fireworks) {
+            for (const particle of firework) {
+                particle.update();
+                particle.draw();
+            }
+        }
+
+        // Remove faded-out particles
+        fireworks = fireworks.filter(firework => firework[0].life > 0);
+
+        requestAnimationFrame(animateFireworkBurst);
+    }
+
+    function launchFirework(x, y) {
+        fireworks.push(createFirework(x, y));
+    }
+
+    function launch(x, y) {
+      Particle.radius = 5;
+      launchFirework(x, y);  
+      animateFireworkBurst();
+      // fireworks = [];
+    }
+
+        
+    </script>
+</body>
+</html>
